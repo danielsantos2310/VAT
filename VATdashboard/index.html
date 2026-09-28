@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ireland VAT Intelligence 2026 — Live Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#080c11; --panel:#0f151c; --panel-2:#141c25; --border:#1e2a36; --border-soft:#18222c;
+    --text:#e6edf3; --muted:#8b98a5; --dim:#5d6b7a;
+    --green:#00d47e; --green-dim:#00a862; --blue:#3b82f6; --amber:#f59e0b;
+    --purple:#a855f7; --red:#ef4444; --cyan:#06b6d4; --pink:#ec4899;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased;overflow:hidden}
+  .app{display:flex;height:100vh}
+
+  /* SIDEBAR */
+  .sidebar{width:252px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 14px;overflow-y:auto}
+  .sidebar::-webkit-scrollbar{width:6px}
+  .sidebar::-webkit-scrollbar-thumb{background:#1e2a36;border-radius:3px}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 8px 22px}
+  .brand-mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#00d47e,#00a862 60%,#0ea5e9);display:grid;place-items:center;font-weight:800;font-size:15px;color:#04120c;box-shadow:0 4px 14px rgba(0,212,126,.25)}
+  .brand-text b{display:block;font-size:13.5px;letter-spacing:-.2px}
+  .brand-text span{display:block;font-size:10.5px;color:var(--dim);letter-spacing:.4px;text-transform:uppercase;margin-top:1px}
+  .nav-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);padding:14px 10px 8px;font-weight:600}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:13.5px;font-weight:500;transition:all .15s;margin-bottom:2px;user-select:none}
+  .nav-item:hover{background:var(--panel-2);color:var(--text)}
+  .nav-item.active{background:rgba(0,212,126,.1);color:var(--green);font-weight:600}
+  .nav-item.active svg{stroke:var(--green)}
+  .nav-item svg{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:1.9;flex-shrink:0}
+  .nav-item:hover svg{stroke:var(--text)}
+  .nav-item .ext{width:11px;height:11px;margin-left:auto;opacity:.5;stroke:currentColor;fill:none;stroke-width:2}
+  .nav-item:hover .ext{opacity:1}
+  .sidebar-foot{margin-top:auto;padding:14px 10px 0;border-top:1px solid var(--border-soft);font-size:10.5px;color:var(--dim);line-height:1.6}
+  .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:5px;box-shadow:0 0 0 0 rgba(0,212,126,.6);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(0,212,126,.5)}70%{box-shadow:0 0 0 7px rgba(0,212,126,0)}100%{box-shadow:0 0 0 0 rgba(0,212,126,0)}}
+
+  /* MAIN */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .topbar{height:64px;flex-shrink:0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:rgba(8,12,17,.85);backdrop-filter:blur(8px);gap:14px}
+  .page-title{font-size:15.5px;font-weight:650;letter-spacing:-.2px}
+  .page-sub{font-size:11.5px;color:var(--dim);margin-top:1px}
+  .top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pill{font-size:11px;font-weight:600;padding:5px 10px;border-radius:20px;background:rgba(0,212,126,.1);color:var(--green);border:1px solid rgba(0,212,126,.22);display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .pill.warn{background:rgba(245,158,11,.1);color:var(--amber);border-color:rgba(245,158,11,.25)}
+  .pill.err{background:rgba(239,68,68,.1);color:#fca5a5;border-color:rgba(239,68,68,.28)}
+  .pill.info{background:rgba(59,130,246,.1);color:#93c5fd;border-color:rgba(59,130,246,.25)}
+  .pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .btn{font-size:12px;font-weight:600;padding:7px 13px;border-radius:7px;cursor:pointer;background:var(--panel-2);color:var(--muted);border:1px solid var(--border);transition:all .15s;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:#1b242e;color:var(--text);border-color:#2a3846}
+  .btn-primary{background:var(--green);color:#04120c;border-color:var(--green)}
+  .btn-primary:hover{background:#00e88b;color:#04120c}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+
+  .content{flex:1;overflow-y:auto;padding:22px 24px 60px}
+  .content::-webkit-scrollbar{width:9px}
+  .content::-webkit-scrollbar-track{background:transparent}
+  .content::-webkit-scrollbar-thumb{background:#1e2a36;border-radius:5px}
+  .content::-webkit-scrollbar-thumb:hover{background:#2a3846}
+
+  .view{display:none;animation:fade .3s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+  /* ALERT BANNER */
+  .alert-banner{display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:11px;padding:14px 16px;margin-bottom:16px;font-size:12.5px;color:#fca5a5;line-height:1.6;align-items:flex-start;gap:11px}
+  .alert-banner.show{display:flex}
+  .alert-banner b{color:#fecaca}
+  .alert-banner .ai{font-size:16px;flex-shrink:0;line-height:1.3}
+
+  /* KPI */
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 17px;position:relative;overflow:hidden;transition:border-color .2s}
+  .kpi:hover{border-color:#2a3846}
+  .kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent,var(--green)),transparent)}
+  .kpi-label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.7px;font-weight:600;margin-bottom:9px}
+  .kpi-value{font-size:27px;font-weight:700;letter-spacing:-1px;line-height:1;display:flex;align-items:baseline;gap:5px}
+  .kpi-value small{font-size:14px;font-weight:600;color:var(--muted)}
+  .kpi-foot{margin-top:9px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .delta{font-weight:700;font-size:11.5px}
+  .up{color:var(--green)} .down{color:var(--red)} .flat{color:var(--dim)}
+
+  /* GRID / CARD */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+  .grid-2-1{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px}
+  .grid-1-2{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:16px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 19px}
+  .card-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px}
+  .card-title{font-size:13.5px;font-weight:650;letter-spacing:-.1px}
+  .card-desc{font-size:11.5px;color:var(--dim);margin-top:3px;line-height:1.5}
+  .chart-wrap{position:relative;height:250px}
+  .chart-wrap.sm{height:200px} .chart-wrap.lg{height:320px}
+
+  /* RATE CARDS */
+  .rate-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px}
+  .rate-card{background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:14px 15px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
+  .rate-card:hover{transform:translateY(-2px);border-color:var(--rc,var(--green))}
+  .rate-card.sel{border-color:var(--rc,var(--green));background:var(--panel-2)}
+  .rate-card.sel::before{content:'';position:absolute;inset:0;background:var(--rc,var(--green));opacity:.06;pointer-events:none}
+  .rc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .rc-name{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);font-weight:700}
+  .rc-dot{width:8px;height:8px;border-radius:50%;background:var(--rc,var(--green))}
+  .rc-val{font-size:24px;font-weight:750;letter-spacing:-.9px;color:var(--rc,var(--green))}
+  .rc-sub{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.45}
+
+  /* TABLE */
+  .tbl-tools{display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap}
+  .input{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:12.5px;font-family:inherit;outline:none;transition:border-color .15s;min-width:200px}
+  .input:focus{border-color:var(--green-dim)}
+  .input::placeholder{color:var(--dim)}
+  select.input{cursor:pointer;min-width:150px}
+  .tbl-scroll{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  thead th{background:var(--panel-2);text-align:left;padding:11px 14px;font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap}
+  tbody td{padding:10px 14px;border-bottom:1px solid var(--border-soft);color:var(--muted)}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:rgba(255,255,255,.017);color:var(--text)}
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;background:color-mix(in srgb,var(--bc) 14%,transparent);color:var(--bc);border:1px solid color-mix(in srgb,var(--bc) 28%,transparent)}
+  .td-strong{color:var(--text);font-weight:600}
+
+  /* CALCULATOR */
+  .calc-grid{display:grid;grid-template-columns:1fr 1.15fr;gap:16px}
+  .field{margin-bottom:15px}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--dim);font-weight:700;margin-bottom:7px}
+  .field .input{width:100%}
+  .seg{display:flex;background:var(--panel-2);border:1px solid var(--border);border-radius:9px;padding:3px;gap:3px}
+  .seg button{flex:1;padding:8px;border:none;background:transparent;color:var(--muted);font-size:12.5px;font-weight:600;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s}
+  .seg button.on{background:var(--green);color:#04120c}
+  .result-box{background:linear-gradient(150deg,rgba(0,212,126,.09),rgba(0,212,126,.02));border:1px solid rgba(0,212,126,.25);border-radius:12px;padding:20px;margin-bottom:14px}
+  .rb-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--green);font-weight:700;margin-bottom:7px}
+  .rb-value{font-size:38px;font-weight:750;letter-spacing:-1.7px;line-height:1;color:var(--text)}
+  .rb-note{font-size:11.5px;color:var(--muted);margin-top:9px}
+  .breakdown{display:flex;flex-direction:column;gap:1px;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+  .bd-row{display:flex;justify-content:space-between;padding:12px 15px;background:var(--panel-2);font-size:12.5px}
+  .bd-row span:first-child{color:var(--muted)}
+  .bd-row span:last-child{font-weight:650;font-variant-numeric:tabular-nums}
+  .bd-row.total{background:rgba(0,212,126,.08)}
+  .bd-row.total span:last-child{color:var(--green)}
+
+  /* TIMELINE */
+  .timeline{position:relative;padding-left:26px}
+  .timeline::before{content:'';position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:var(--border)}
+  .tl-item{position:relative;padding-bottom:22px}
+  .tl-item:last-child{padding-bottom:0}
+  .tl-item::before{content:'';position:absolute;left:-24px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--panel);border:2.5px solid var(--tc,var(--green))}
+  .tl-date{font-size:11px;font-weight:700;color:var(--tc,var(--green));text-transform:uppercase;letter-spacing:.7px}
+  .tl-title{font-size:13.5px;font-weight:650;margin:4px 0 5px}
+  .tl-desc{font-size:12.5px;color:var(--muted);line-height:1.6}
+
+  /* MISC */
+  .note{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.22);border-radius:10px;padding:13px 15px;font-size:12.5px;color:#f0c674;line-height:1.65;display:flex;gap:11px;align-items:flex-start}
+  .note b{color:#fbbf24}
+  .note-icon{flex-shrink:0;font-size:15px;line-height:1.3}
+  .section-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);font-weight:700;margin:24px 0 13px}
+  .mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:16px}
+  .mini{background:var(--panel-2);border-radius:9px;padding:12px 13px}
+  .mini-l{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+  .mini-v{font-size:17px;font-weight:700;margin-top:5px;letter-spacing:-.5px}
+
+  /* SOURCE CARDS */
+  .source-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .source-card{background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:15px 16px;transition:border-color .18s,transform .18s}
+  .source-card:hover{border-color:var(--sc,var(--green));transform:translateY(-2px)}
+  .sc-head{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+  .sc-icon{width:30px;height:30px;border-radius:8px;background:color-mix(in srgb,var(--sc,var(--green)) 14%,transparent);border:1px solid color-mix(in srgb,var(--sc,var(--green)) 28%,transparent);display:grid;place-items:center;font-size:14px}
+  .sc-name{font-size:13px;font-weight:650;letter-spacing:-.1px}
+  .sc-authority{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+  .sc-desc{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:11px}
+  .sc-link{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--sc,var(--green));text-decoration:none;cursor:pointer;padding:6px 11px;border-radius:7px;background:color-mix(in srgb,var(--sc,var(--green)) 10%,transparent);border:1px solid color-mix(in srgb,var(--sc,var(--green)) 22%,transparent);transition:all .15s}
+  .sc-link:hover{background:color-mix(in srgb,var(--sc,var(--green)) 18%,transparent)}
+  .sc-link svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2}
+  .sc-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);margin-top:9px}
+
+  /* RSS */
+  .rss-list{display:flex;flex-direction:column;gap:1px;border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+  .rss-item{padding:13px 15px;background:var(--panel-2);transition:background .15s;cursor:pointer;text-decoration:none;display:block}
+  .rss-item:hover{background:#1b242e}
+  .rss-title{font-size:12.5px;font-weight:600;color:var(--text);line-height:1.45;margin-bottom:4px}
+  .rss-meta{font-size:11px;color:var(--dim)}
+  .rss-empty{padding:24px;text-align:center;color:var(--dim);font-size:12.5px}
+
+  /* STATUS ROWS */
+  .status-row{display:flex;justify-content:space-between;align-items:center;padding:12px 15px;background:var(--panel-2);border-bottom:1px solid var(--border-soft);font-size:12.5px}
+  .status-row:last-child{border-bottom:none}
+  .status-row span:first-child{color:var(--muted)}
+  .status-row span:last-child{font-weight:650;display:flex;align-items:center;gap:7px}
+
+  @media(max-width:1250px){
+    .kpi-grid{grid-template-columns:repeat(2,1fr)}
+    .rate-strip{grid-template-columns:repeat(3,1fr)}
+    .grid-2,.grid-3,.grid-2-1,.grid-1-2,.calc-grid,.source-grid{grid-template-columns:1fr}
+  }
+  @media(max-width:760px){
+    .sidebar{display:none}
+    .kpi-grid{grid-template-columns:1fr}
+    .rate-strip{grid-template-columns:1fr 1fr}
+    .content{padding:16px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">IE</div>
+      <div class="brand-text">
+        <b>VAT Intelligence</b>
+        <span>Ireland · 2026</span>
+      </div>
+    </div>
+
+    <div class="nav-label">Analytics</div>
+    <div class="nav-item active" data-view="overview">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+      Overview
+    </div>
+    <div class="nav-item" data-view="rates">
+      <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+      Rate Structure
+    </div>
+    <div class="nav-item" data-view="calculator">
+      <svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2.5"/><path d="M8 7h8M8 12h2M12 12h2M16 12h.01M8 16h2M12 16h2M16 16h.01"/></svg>
+      VAT Calculator
+    </div>
+    <div class="nav-item" data-view="sectors">
+      <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg>
+      Sector Analysis
+    </div>
+    <div class="nav-item" data-view="eu">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/></svg>
+      EU Benchmark
+    </div>
+    <div class="nav-item" data-view="timeline">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+      Policy Timeline
+    </div>
+    <div class="nav-item" data-view="table">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+      Full Rate Table
+    </div>
+
+    <div class="nav-label">Live Sources</div>
+    <div class="nav-item" onclick="openSource('https://www.revenue.ie/en/vat/vat-rates/search-vat-rates/current-VAT-rates.aspx')">
+      <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Revenue · Current Rates
+      <svg class="ext" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+    <div class="nav-item" onclick="openSource('https://www.revenue.ie/en/vat/vat-rates/search-vat-rates/second-reduced-rate.aspx')">
+      <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Revenue · 9% Rate
+      <svg class="ext" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+    <div class="nav-item" onclick="openSource('https://www.revenue.ie/en/vat/vat-rates/search-vat-rates/reduced-rate.aspx')">
+      <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Revenue · 13.5% Rate
+      <svg class="ext" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+    <div class="nav-item" onclick="openSource('https://www.revenue.ie/en/vat/vat-rates/search-vat-rates/historical-vat-rates.aspx')">
+      <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Revenue · Historical Rates
+      <svg class="ext" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+    <div class="nav-item" onclick="openSource('https://www.gov.ie/en/department-of-finance/press-releases/government-marks-reduction-of-vat-rate-to-9-for-food-businesses-and-hairdressers/')">
+      <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Gov.ie · Budget 2026
+      <svg class="ext" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+    <div class="nav-item" onclick="openSource('https://revisedacts.lawreform.ie/eli/2010/act/31/revised/en/html')">
+      <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      VAT Consolidation Act 2010
+      <svg class="ext" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+
+    <div class="nav-label">Compliance</div>
+    <div class="nav-item" data-view="sources">
+      <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+      Sources &amp; Status
+    </div>
+
+    <div class="sidebar-foot">
+      <span class="live-dot"></span>Auto-sync every 6h<br>
+      <span id="footLastCheck">Last check: —</span>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <div class="page-title" id="pageTitle">VAT Overview</div>
+        <div class="page-sub" id="pageSub">Irish Value-Added Tax performance &amp; structure · 2026</div>
+      </div>
+      <div class="top-actions">
+        <span class="pill" id="freshnessBadge"><span class="dot"></span>Live · FY2026</span>
+        <span class="pill info" id="apiBadge"><span class="dot"></span>API: checking…</span>
+        <button class="btn" id="verifyBtn" title="Run live rate check now">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+          Verify Now
+        </button>
+        <button class="btn" onclick="window.print()">Export PDF</button>
+        <button class="btn btn-primary" onclick="exportCSV()">Download CSV</button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ALERT BANNER -->
+      <div class="alert-banner" id="alertBanner">
+        <span class="ai">⚠️</span>
+        <div id="alertText"></div>
+      </div>
+
+      <!-- ================= OVERVIEW ================= -->
+      <section class="view active" id="view-overview">
+        <div class="kpi-grid">
+          <div class="kpi" style="--accent:#00d47e">
+            <div class="kpi-label">Standard Rate</div>
+            <div class="kpi-value">23<small>%</small></div>
+            <div class="kpi-foot"><span class="delta flat">▬ 0.0pp</span> unchanged since 2012</div>
+          </div>
+          <div class="kpi" style="--accent:#3b82f6">
+            <div class="kpi-label">Net VAT Receipts 2025</div>
+            <div class="kpi-value">€23.0<small>bn</small></div>
+            <div class="kpi-foot"><span class="delta up">▲ +5.1%</span> vs 2024 (€21.9bn)</div>
+          </div>
+          <div class="kpi" style="--accent:#a855f7">
+            <div class="kpi-label">2026 YTD (Jan–Aug)</div>
+            <div class="kpi-value">€16.3<small>bn</small></div>
+            <div class="kpi-foot"><span class="delta up">▲ +7.3%</span> vs same period 2025</div>
+          </div>
+          <div class="kpi" style="--accent:#f59e0b">
+            <div class="kpi-label">VAT Registrations</div>
+            <div class="kpi-value">291,411</div>
+            <div class="kpi-foot"><span class="delta up">▲ +4,808</span> net new in 2025</div>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi" style="--accent:#06b6d4">
+            <div class="kpi-label">VAT / Total Tax Revenue</div>
+            <div class="kpi-value">~21<small>%</small></div>
+            <div class="kpi-foot">3rd largest tax head</div>
+          </div>
+          <div class="kpi" style="--accent:#ec4899">
+            <div class="kpi-label">Compliance Gap (2023)</div>
+            <div class="kpi-value">7.6<small>%</small></div>
+            <div class="kpi-foot"><span class="delta up">▼ below</span> EU avg ~10–12%</div>
+          </div>
+          <div class="kpi" style="--accent:#00d47e">
+            <div class="kpi-label">Catering &amp; Hairdressing</div>
+            <div class="kpi-value">9<small>%</small></div>
+            <div class="kpi-foot"><span class="delta up">▼ from 13.5%</span> from 1 Jul 2026 · permanent</div>
+          </div>
+          <div class="kpi" style="--accent:#8b98a5">
+            <div class="kpi-label">Flat-Rate Farmer Addition</div>
+            <div class="kpi-value">4.5<small>%</small></div>
+            <div class="kpi-foot"><span class="delta down">▼ from 5.1%</span> now below livestock 4.8%</div>
+          </div>
+        </div>
+
+        <div class="grid-2-1">
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Net VAT Receipts · 2020–2026</div><div class="card-desc">€ billions · 2026 is Department of Finance projection</div></div></div>
+            <div class="chart-wrap lg"><canvas id="chartReceipts"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Activity by Rate Band</div><div class="card-desc">Share of economic activity subject to each rate</div></div></div>
+            <div class="chart-wrap lg"><canvas id="chartRateDist"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">2026 Cumulative Receipts</div><div class="card-desc">VAT collected year-to-date (€bn)</div></div></div>
+            <div class="chart-wrap"><canvas id="chartYtd"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Revenue Composition 2025</div><div class="card-desc">Net VAT receipts by source channel</div></div></div>
+            <div class="chart-wrap"><canvas id="chartComposition"></canvas></div>
+          </div>
+        </div>
+
+        <div class="note">
+          <span class="note-icon">⚡</span>
+          <div><b>Key 2026 development:</b> Food, catering, restaurant supplies, hot take-away food and hairdressing services moved permanently to the <b>9% second reduced rate</b> on 1 July 2026, with no sunset clause. Estimated full-year cost is <b>€632m</b>, supporting over <b>150,000 jobs</b> — approximately <b>85% of the benefit flows to SMEs</b>.</div>
+        </div>
+      </section>
+
+      <!-- ================= RATES ================= -->
+      <section class="view" id="view-rates">
+        <div class="rate-strip" id="rateStrip"></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Standard Rate History · 1972–2026</div><div class="card-desc">Ireland's general VAT rate over five decades</div></div></div>
+            <div class="chart-wrap lg"><canvas id="chartHist"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Rate Band Detail</div><div class="card-desc" id="rateDetailTitle">Select a rate card above</div></div></div>
+            <div id="rateDetail"></div>
+          </div>
+        </div>
+        <div class="section-title">Historical Rate Matrix</div>
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr><th>Effective From</th><th>Standard</th><th>Reduced</th><th>Second Reduced</th><th>Livestock</th><th>Flat-Rate Farmer</th></tr></thead>
+            <tbody id="histTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= CALCULATOR ================= -->
+      <section class="view" id="view-calculator">
+        <div class="calc-grid">
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">VAT Calculator</div><div class="card-desc">Compute VAT for any Irish category at 2026 rates</div></div></div>
+            <div class="field">
+              <label>Calculation Mode</label>
+              <div class="seg" id="calcMode">
+                <button class="on" data-mode="add">Add VAT (Net → Gross)</button>
+                <button data-mode="remove">Remove VAT (Gross → Net)</button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Category</label>
+              <select class="input" id="calcCategory"></select>
+            </div>
+            <div class="field">
+              <label>Amount (€)</label>
+              <input class="input" id="calcAmount" type="number" value="1000" min="0" step="0.01">
+            </div>
+            <div class="field" id="farmerField" style="display:none">
+              <label>Farmer Status</label>
+              <select class="input" id="calcFarmer">
+                <option value="registered">VAT-registered farmer (normal rules)</option>
+                <option value="flat">Unregistered flat-rate farmer (+4.5%)</option>
+              </select>
+            </div>
+            <div class="mini-stats">
+              <div class="mini"><div class="mini-l">Applied Rate</div><div class="mini-v" id="miniRate" style="color:var(--green)">23%</div></div>
+              <div class="mini"><div class="mini-l">Rate Band</div><div class="mini-v" id="miniBand" style="font-size:13px">Standard</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Result</div><div class="card-desc">Live calculation breakdown</div></div></div>
+            <div class="result-box">
+              <div class="rb-label" id="resLabel">Gross Amount (incl. VAT)</div>
+              <div class="rb-value" id="resValue">€0.00</div>
+              <div class="rb-note" id="resNote">Enter an amount to calculate</div>
+            </div>
+            <div class="breakdown">
+              <div class="bd-row"><span>Net amount (excl. VAT)</span><span id="bdNet">€0.00</span></div>
+              <div class="bd-row"><span>VAT rate applied</span><span id="bdRate">23%</span></div>
+              <div class="bd-row"><span>VAT amount</span><span id="bdVat">€0.00</span></div>
+              <div class="bd-row total"><span>Gross amount (incl. VAT)</span><span id="bdGross">€0.00</span></div>
+            </div>
+            <div class="note" style="margin-top:16px;background:rgba(59,130,246,.07);border-color:rgba(59,130,246,.22);color:#93c5fd">
+              <span class="note-icon">ℹ️</span>
+              <div>Alcohol, soft drinks and bottled water remain at <b>23%</b> even when served alongside a 9% meal. Hotel accommodation stays at <b>13.5%</b>; only the catering element drops to 9%.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTORS ================= -->
+      <section class="view" id="view-sectors">
+        <div class="kpi-grid">
+          <div class="kpi" style="--accent:#00d47e"><div class="kpi-label">Wholesale &amp; Retail</div><div class="kpi-value">€8.5<small>bn</small></div><div class="kpi-foot">37.0% of internal VAT receipts</div></div>
+          <div class="kpi" style="--accent:#3b82f6"><div class="kpi-label">Professional Services</div><div class="kpi-value">€3.0<small>bn</small></div><div class="kpi-foot">13.0% share · +4% YoY</div></div>
+          <div class="kpi" style="--accent:#a855f7"><div class="kpi-label">Info &amp; Communication</div><div class="kpi-value">€1.7<small>bn</small></div><div class="kpi-foot"><span class="delta up">▲ +31% YoY</span> fastest growing</div></div>
+          <div class="kpi" style="--accent:#f59e0b"><div class="kpi-label">Internal VAT Repayments</div><div class="kpi-value">€8.2<small>bn</small></div><div class="kpi-foot">Largest repayment of any tax head</div></div>
+        </div>
+        <div class="grid-2-1">
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">VAT Receipts by Sector · 2025</div><div class="card-desc">Internal VAT receipts, € billions</div></div></div>
+            <div class="chart-wrap lg"><canvas id="chartSectors"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Sector Share</div><div class="card-desc">Proportion of total internal VAT</div></div></div>
+            <div class="chart-wrap lg"><canvas id="chartSectorShare"></canvas></div>
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">VAT Registrations 2025</div><div class="card-desc">Population dynamics</div></div></div>
+            <div class="mini-stats" style="grid-template-columns:1fr">
+              <div class="mini"><div class="mini-l">Total registered</div><div class="mini-v">291,411</div></div>
+              <div class="mini"><div class="mini-l">New registrations</div><div class="mini-v" style="color:var(--green)">26,023</div></div>
+              <div class="mini"><div class="mini-l">Ceased registrations</div><div class="mini-v" style="color:var(--red)">21,215</div></div>
+              <div class="mini"><div class="mini-l">Net increase</div><div class="mini-v">+4,808 <span style="font-size:12px;color:var(--muted)">(+2.0%)</span></div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Concentration Risk</div><div class="card-desc">Large Corporates Division share</div></div></div>
+            <div class="mini-stats" style="grid-template-columns:1fr">
+              <div class="mini"><div class="mini-l">Share of all VAT traders</div><div class="mini-v">0.3%</div></div>
+              <div class="mini"><div class="mini-l">Share of VAT payments</div><div class="mini-v" style="color:var(--green)">27%</div></div>
+              <div class="mini"><div class="mini-l">Share of VAT repayments</div><div class="mini-v" style="color:var(--amber)">30%</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Compliance Health</div><div class="card-desc">Revenue enforcement metrics</div></div></div>
+            <div class="mini-stats" style="grid-template-columns:1fr">
+              <div class="mini"><div class="mini-l">Compliance · large/medium</div><div class="mini-v" style="color:var(--green)">99%</div></div>
+              <div class="mini"><div class="mini-l">Compliance · all other</div><div class="mini-v" style="color:var(--green)">92%</div></div>
+              <div class="mini"><div class="mini-l">VAT compliance gap (2023)</div><div class="mini-v" style="color:var(--amber)">7.6%</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= EU ================= -->
+      <section class="view" id="view-eu">
+        <div class="kpi-grid">
+          <div class="kpi" style="--accent:#00d47e"><div class="kpi-label">Ireland Standard Rate</div><div class="kpi-value">23<small>%</small></div><div class="kpi-foot"><span class="delta down">▲ above</span> EU average</div></div>
+          <div class="kpi" style="--accent:#3b82f6"><div class="kpi-label">EU Average Standard Rate</div><div class="kpi-value">~21.8<small>%</small></div><div class="kpi-foot">Weighted across 27 member states</div></div>
+          <div class="kpi" style="--accent:#ef4444"><div class="kpi-label">Highest in EU</div><div class="kpi-value">27<small>%</small></div><div class="kpi-foot">Hungary</div></div>
+          <div class="kpi" style="--accent:#a855f7"><div class="kpi-label">Lowest in EU</div><div class="kpi-value">17<small>%</small></div><div class="kpi-foot">Luxembourg</div></div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-head"><div><div class="card-title">EU Standard VAT Rates · 2026</div><div class="card-desc">Ireland highlighted in green · dashed line marks EU average (~21.8%)</div></div></div>
+          <div class="chart-wrap lg"><canvas id="chartEu"></canvas></div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Positioning Analysis</div><div class="card-desc">How Ireland compares on headline rate</div></div></div>
+            <div class="mini-stats" style="grid-template-columns:1fr">
+              <div class="mini"><div class="mini-l">Rank among 27 member states</div><div class="mini-v">7th highest</div></div>
+              <div class="mini"><div class="mini-l">Gap to EU average</div><div class="mini-v" style="color:var(--amber)">+1.2pp</div></div>
+              <div class="mini"><div class="mini-l">Gap to highest (Hungary)</div><div class="mini-v">−4.0pp</div></div>
+              <div class="mini"><div class="mini-l">Gap to lowest (Luxembourg)</div><div class="mini-v">+6.0pp</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Effective Burden Context</div><div class="card-desc">Why the headline rate overstates the real burden</div></div></div>
+            <div class="note" style="background:rgba(0,212,126,.07);border-color:rgba(0,212,126,.22);color:#6ee7b7">
+              <span class="note-icon">📊</span>
+              <div>Ireland applies the <b>zero rate</b> to most food, children's clothing, oral medicines and publications — far broader than most EU peers. Combined with the 13.5% hospitality rate and the new 9% catering rate, the <b>effective VAT burden on lower-income households is materially below</b> what the 23% headline suggests.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TIMELINE ================= -->
+      <section class="view" id="view-timeline">
+        <div class="grid-2-1">
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Policy Timeline</div><div class="card-desc">Key VAT events and changes shaping 2026</div></div></div>
+            <div class="timeline" id="timeline"></div>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-head"><div><div class="card-title">2026 Fiscal Impact</div><div class="card-desc">Estimated cost of rate measures</div></div></div>
+              <div class="mini-stats" style="grid-template-columns:1fr">
+                <div class="mini"><div class="mini-l">9% catering · 2026 partial</div><div class="mini-v" style="color:var(--amber)">€216m</div></div>
+                <div class="mini"><div class="mini-l">9% catering · full year 2027</div><div class="mini-v" style="color:var(--amber)">€632m</div></div>
+                <div class="mini"><div class="mini-l">Jobs supported</div><div class="mini-v" style="color:var(--green)">150,000+</div></div>
+                <div class="mini"><div class="mini-l">SME share of benefit</div><div class="mini-v" style="color:var(--green)">~85%</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head"><div><div class="card-title">Registration Thresholds</div><div class="card-desc">Effective 2026</div></div></div>
+              <div class="breakdown">
+                <div class="bd-row"><span>Services only</span><span>€42,500</span></div>
+                <div class="bd-row"><span>Goods (manufactured from zero-rated)</span><span>€42,500</span></div>
+                <div class="bd-row"><span>Goods</span><span>€85,000</span></div>
+                <div class="bd-row"><span>Goods &amp; services (90%+ goods)</span><span>€85,000</span></div>
+                <div class="bd-row"><span>Distance sales / cross-border TBE</span><span>€10,000</span></div>
+                <div class="bd-row"><span>Acquisitions from EU member states</span><span>€41,000</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= FULL TABLE ================= -->
+      <section class="view" id="view-table">
+        <div class="card">
+          <div class="card-head"><div><div class="card-title">Complete Irish VAT Rate Reference · 2026</div><div class="card-desc">All categories, rates and effective dates. Use the filters to narrow results.</div></div></div>
+          <div class="tbl-tools">
+            <input class="input" id="tblSearch" placeholder="Search categories or examples…">
+            <select class="input" id="tblFilter">
+              <option value="">All rate bands</option>
+              <option value="23">Standard · 23%</option>
+              <option value="13.5">Reduced · 13.5%</option>
+              <option value="9">Second Reduced · 9%</option>
+              <option value="0">Zero · 0%</option>
+              <option value="4.8">Livestock · 4.8%</option>
+              <option value="4.5">Flat-Rate Farmer · 4.5%</option>
+            </select>
+          </div>
+          <div class="tbl-scroll">
+            <table>
+              <thead><tr><th>Category</th><th>Rate</th><th>Band</th><th>Examples</th><th>Notes</th></tr></thead>
+              <tbody id="fullTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SOURCES & COMPLIANCE ================= -->
+      <section class="view" id="view-sources">
+
+        <div class="kpi-grid">
+          <div class="kpi" style="--accent:#00d47e">
+            <div class="kpi-label">API Status</div>
+            <div class="kpi-value" id="srcApiStatus" style="font-size:20px">Checking…</div>
+            <div class="kpi-foot" id="srcApiFoot">TaxID.dev · live rate endpoint</div>
+          </div>
+          <div class="kpi" style="--accent:#3b82f6">
+            <div class="kpi-label">Last API Check</div>
+            <div class="kpi-value" id="srcLastApi" style="font-size:18px">—</div>
+            <div class="kpi-foot">Auto-runs every 6 hours</div>
+          </div>
+          <div class="kpi" style="--accent:#a855f7">
+            <div class="kpi-label">Last Manual Review</div>
+            <div class="kpi-value" id="srcLastManual" style="font-size:18px">—</div>
+            <div class="kpi-foot">Revenue page verification</div>
+          </div>
+          <div class="kpi" style="--accent:#f59e0b">
+            <div class="kpi-label">Rate Mismatches</div>
+            <div class="kpi-value" id="srcMismatch" style="font-size:24px">0</div>
+            <div class="kpi-foot" id="srcMismatchFoot">No discrepancies detected</div>
+          </div>
+        </div>
+
+        <div class="section-title">Authoritative Sources</div>
+        <div class="source-grid" id="sourceGrid"></div>
+
+        <div class="section-title">Live Compliance Status</div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">System Health</div><div class="card-desc">Real-time status of automated checks</div></div></div>
+            <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">
+              <div class="status-row"><span>TaxID.dev API</span><span id="stApi"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--dim);display:inline-block"></span> Pending</span></div>
+              <div class="status-row"><span>Revenue Commissioners page</span><span style="color:var(--green)">● Reachable</span></div>
+              <div class="status-row"><span>Gov.ie press releases</span><span style="color:var(--green)">● Reachable</span></div>
+              <div class="status-row"><span>Irish Statute Book</span><span style="color:var(--green)">● Reachable</span></div>
+              <div class="status-row"><span>CAI Tax News RSS</span><span id="stRss"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--dim);display:inline-block"></span> Pending</span></div>
+              <div class="status-row"><span>Next scheduled check</span><span id="stNext">—</span></div>
+            </div>
+            <div class="note" style="margin-top:14px;background:rgba(59,130,246,.07);border-color:rgba(59,130,246,.22);color:#93c5fd">
+              <span class="note-icon">ℹ️</span>
+              <div>Automated feeds <b>detect</b> changes but do not authorise them. Always verify against the Revenue Commissioners' published page before updating production figures.</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><div><div class="card-title">Latest Tax Headlines</div><div class="card-desc">Chartered Accountants Ireland · Tax News RSS</div></div></div>
+            <div class="rss-list" id="rssList">
+              <div class="rss-empty">Loading feed…</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">Manual Verification Checklist</div>
+        <div class="card">
+          <div class="breakdown">
+            <div class="bd-row"><span>1. Open Revenue current VAT rates page</span><span style="color:var(--green)">Revenue.ie →</span></div>
+            <div class="bd-row"><span>2. Confirm standard rate (23%)</span><span>Quarterly</span></div>
+            <div class="bd-row"><span>3. Confirm reduced rate (13.5%)</span><span>Quarterly</span></div>
+            <div class="bd-row"><span>4. Confirm second reduced rate (9%) and scope</span><span>Quarterly</span></div>
+            <div class="bd-row"><span>5. Confirm livestock rate (4.8%) &amp; flat-rate farmer (4.5%)</span><span>Quarterly</span></div>
+            <div class="bd-row"><span>6. Check gov.ie for Budget / Finance Act changes</span><span>After Budget</span></div>
+            <div class="bd-row"><span>7. Cross-check against VAT Consolidation Act 2010</span><span>On alert</span></div>
+            <div class="bd-row total"><span>Update dashboard constants if verified</span><span>Only after confirmation</span></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+/* =========================================================
+   DATA MODEL
+   ========================================================= */
+const RATES = [
+  {key:'standard',name:'Standard',rate:23,color:'#00d47e',share:'~47.6% of activity',receipts:'~66.1% of VAT receipts',sub:'Majority of goods & services',
+   detail:['Cars, electronics, furniture, household goods','Alcohol, soft drinks, bottled water','Cosmetics and personal care products','Petrol and most non-reduced fuels','Professional services (legal, accounting, consultancy)','Non-oral medicines']},
+  {key:'reduced',name:'Reduced',rate:13.5,color:'#3b82f6',share:'~40.0% of activity',receipts:'~32.5% of VAT receipts',sub:'Hospitality, construction, culture',
+   detail:['Hotel and guesthouse accommodation','Cinema, theatre, museum admissions','Cleaning and maintenance services','Veterinary services','Coal and heating oil','Short-term car hire']},
+  {key:'second',name:'Second Reduced',rate:9,color:'#a855f7',share:'~2.0% of activity',receipts:'~0.5% of VAT receipts',sub:'Energy, sport, catering, hairdressing',
+   detail:['Electricity, natural gas, EV charging','Heat pump supply and installation','Sporting facilities and gyms','Restaurant and catering food (from 1 Jul 2026)','Hot take-away food, hot tea & coffee (from 1 Jul 2026)','Hairdressing services (from 1 Jul 2026)']},
+  {key:'zero',name:'Zero',rate:0,color:'#06b6d4',share:'~9.9% of activity',receipts:'—',sub:'Food, medicine, publications',
+   detail:['Most food: bread, milk, meat, vegetables, fruit','Oral medicines (human & veterinary)','Books, e-books, audiobooks, newspapers','Children\u2019s clothing and footwear (under 11)','Agricultural inputs: feed, fertiliser, seeds','Solar panels on private dwellings and schools']},
+  {key:'livestock',name:'Livestock',rate:4.8,color:'#f59e0b',share:'<1% of activity',receipts:'<1% of VAT receipts',sub:'Live animals only',
+   detail:['Live cattle','Live sheep','Live pigs','Fixed at 4.8% since 2005','Exports outside EU may qualify for 0%']},
+  {key:'farmer',name:'Flat-Rate Farmer',rate:4.5,color:'#8b98a5',share:'Compensation scheme',receipts:'—',sub:'Unregistered farmer addition',
+   detail:['Reduced from 5.1% to 4.5% on 1 Jan 2026','Now 0.3pp BELOW the 4.8% livestock rate','Creates under-compensation for livestock sellers','Applies to supplies to VAT-registered businesses','Broiler chicken services excluded from Sep 2025']}
+];
+
+const RECEIPTS = {labels:['2020','2021','2022','2023','2024','2025','2026e'],values:[13.7,16.2,20.2,20.3,21.9,23.0,23.3],growth:[null,18.2,24.7,0.5,8.0,5.1,1.3]};
+const YTD = {labels:['Q1 (Jan–Mar)','Jan–May','Jan–Jun','Jan–Aug'],values:[8.0,12.2,12.5,16.3],yoy:[5.3,7.1,7.5,7.3]};
+const COMPOSITION = {labels:['Internal VAT (traders)','VAT OSS / IOSS','Other (imports etc.)'],values:[21.0,0.7,1.3],colors:['#00d47e','#3b82f6','#a855f7']};
+const SECTORS = {labels:['Wholesale & Retail Trade','Professional, Scientific & Technical','Information & Communication','Manufacturing','All Other Sectors'],values:[8.5,3.0,1.7,1.4,8.4],share:[37.0,13.0,7.4,6.1,36.5],colors:['#00d47e','#3b82f6','#a855f7','#f59e0b','#5d6b7a']};
+const EU = [{c:'Hungary',v:27.0},{c:'Finland',v:25.5},{c:'Croatia',v:25.0},{c:'Denmark',v:25.0},{c:'Sweden',v:25.0},{c:'Greece',v:24.0},{c:'Ireland',v:23.0},{c:'Poland',v:23.0},{c:'Portugal',v:23.0},{c:'Italy',v:22.0},{c:'France',v:20.0},{c:'Germany',v:19.0},{c:'Cyprus',v:19.0},{c:'Malta',v:18.0},{c:'Luxembourg',v:17.0}];
+const EU_AVG = 21.8;
+
+const HIST_RATES = [
+  {d:'1 Jan 2026',s:23,r:13.5,s2:9,l:4.8,f:'4.5'},{d:'1 Jan 2025',s:23,r:13.5,s2:9,l:4.8,f:'5.1'},
+  {d:'1 Jan 2024',s:23,r:13.5,s2:9,l:4.8,f:'4.8'},{d:'1 Jan 2023',s:23,r:13.5,s2:9,l:4.8,f:'5.0'},
+  {d:'1 Mar 2021',s:23,r:13.5,s2:9,l:4.8,f:'5.6'},{d:'1 Jan 2021',s:21,r:13.5,s2:9,l:4.8,f:'5.6'},
+  {d:'1 Sep 2020',s:21,r:13.5,s2:9,l:4.8,f:'5.4'},{d:'1 Jan 2020',s:23,r:13.5,s2:9,l:4.8,f:'5.4'},
+  {d:'1 Jan 2016',s:23,r:13.5,s2:9,l:4.8,f:'5.2'},{d:'1 Jan 2013',s:23,r:13.5,s2:9,l:4.8,f:'4.8'},
+  {d:'1 Jan 2012',s:23,r:13.5,s2:9,l:4.8,f:'5.2'},{d:'1 Jul 2011',s:21,r:13.5,s2:9,l:4.8,f:'5.2'},
+  {d:'1 Jan 2007',s:21,r:13.5,s2:'—',l:4.8,f:'5.2'},{d:'1 Jan 2003',s:21,r:13.5,s2:'—',l:4.3,f:'4.3'}
+];
+
+const STANDARD_HISTORY = {labels:['1972','1980','1983','1986','1990','2003','2007','2011','2012','2020','2021*','2026'],values:[16.37,25,35,25,23,21,21,21,23,23,21,23]};
+
+const TIMELINE = [
+  {d:'1 January 2026',c:'#00d47e',t:'Flat-rate farmer addition reduced to 4.5%',x:'Cut from 5.1% to 4.5% under Budget 2026. It now sits 0.3 percentage points below the 4.8% livestock rate, creating a compensation gap that farming organisations are actively contesting.'},
+  {d:'1 January 2026',c:'#3b82f6',t:'Energy 9% rate extended to 2030',x:'The second reduced rate on electricity, natural gas, EV charging and heat pumps extended to 31 December 2030.'},
+  {d:'26 November 2025',c:'#a855f7',t:'Qualifying apartments move to 9%',x:'Supply and construction of qualifying apartments at 9% until 31 December 2030, aimed at stimulating residential construction output.'},
+  {d:'1 September 2025',c:'#f59e0b',t:'Broiler chicken services leave flat-rate scheme',x:'Broiler chicken services excluded from the flat-rate farmer scheme. Normal VAT registration rules now apply.'},
+  {d:'1 July 2026',c:'#00d47e',t:'Catering and hairdressing permanently at 9%',x:'Food, restaurant and catering supplies, hot take-away food, hot tea & coffee and hairdressing services moved from 13.5% to 9% — with NO sunset clause. Estimated cost €216m in 2026 and €632m for a full year.'},
+  {d:'1 July 2026',c:'#3b82f6',t:'Alcohol and soft drinks stay at 23%',x:'Alcohol, soft drinks and bottled water remain at 23% even when served alongside a 9% meal. Hotel accommodation stays at 13.5% — only the catering element drops.'},
+  {d:'Ongoing 2026',c:'#06b6d4',t:'VAT receipts running +7.3% YoY',x:'Year-to-date receipts to end-August 2026 reached €16.3bn, running 7.3% ahead of the same period in 2025. Full-year projection is €23.3bn.'}
+];
+
+const FULL_TABLE = [
+  {cat:'Cars & vehicles',rate:23,band:'Standard',ex:'New and used cars, commercial vehicles',notes:'VRT applies separately'},
+  {cat:'Electronics',rate:23,band:'Standard',ex:'Computers, phones, TVs, audio equipment',notes:''},
+  {cat:'Furniture & household goods',rate:23,band:'Standard',ex:'Sofas, beds, appliances, kitchenware',notes:''},
+  {cat:'Alcohol',rate:23,band:'Standard',ex:'Beer, wine, spirits, cider',notes:'Excise duty also applies'},
+  {cat:'Soft drinks & bottled water',rate:23,band:'Standard',ex:'Carbonated drinks, juices, bottled water',notes:'Remains 23% even with 9% meals'},
+  {cat:'Cosmetics & toiletries',rate:23,band:'Standard',ex:'Make-up, perfume, shampoo, soap',notes:''},
+  {cat:'Petrol & diesel',rate:23,band:'Standard',ex:'Road fuels',notes:'Carbon tax and excise apply'},
+  {cat:'Professional services',rate:23,band:'Standard',ex:'Legal, accounting, consultancy, IT services',notes:''},
+  {cat:'Non-oral medicines',rate:23,band:'Standard',ex:'Injectables, topical treatments not oral',notes:'Oral medicines are zero-rated'},
+  {cat:'Telecommunications',rate:23,band:'Standard',ex:'Mobile, broadband, landline',notes:''},
+  {cat:'Hotel accommodation',rate:13.5,band:'Reduced',ex:'Hotels, guesthouses, B&Bs, caravan parks',notes:'Catering element at 9% from Jul 2026'},
+  {cat:'Cinema & theatre',rate:13.5,band:'Reduced',ex:'Cinema tickets, theatre, live performances',notes:''},
+  {cat:'Museums & galleries',rate:13.5,band:'Reduced',ex:'Admission to museums, art galleries, exhibitions',notes:''},
+  {cat:'Cleaning services',rate:13.5,band:'Reduced',ex:'Domestic and commercial cleaning',notes:''},
+  {cat:'Veterinary services',rate:13.5,band:'Reduced',ex:'Animal health services',notes:''},
+  {cat:'Coal & heating oil',rate:13.5,band:'Reduced',ex:'Domestic solid fuel and kerosene',notes:'Gas and electricity at 9%'},
+  {cat:'Short-term car hire',rate:13.5,band:'Reduced',ex:'Rental cars, vans',notes:''},
+  {cat:'Building & repair services',rate:13.5,band:'Reduced',ex:'Certain construction, renovation, maintenance',notes:'New residential at 13.5%'},
+  {cat:'Printed matter',rate:13.5,band:'Reduced',ex:'Brochures, leaflets, catalogues, printed music',notes:'Books are zero-rated'},
+  {cat:'Amusement parks',rate:13.5,band:'Reduced',ex:'Fairgrounds, theme parks, open farms',notes:''},
+  {cat:'Live horses & greyhounds',rate:13.5,band:'Reduced',ex:'Live horses (non-food), greyhounds, hire',notes:'Food/agricultural horses at 4.8%'},
+  {cat:'Electricity',rate:9,band:'Second Reduced',ex:'Domestic and business electricity',notes:'Extended to 31 Dec 2030'},
+  {cat:'Natural gas',rate:9,band:'Second Reduced',ex:'Domestic and industrial heating/lighting gas',notes:'Excludes vehicle gas, LPG propellant'},
+  {cat:'EV charging',rate:9,band:'Second Reduced',ex:'Electric vehicle charging points',notes:'Extended to 31 Dec 2030'},
+  {cat:'Heat pumps',rate:9,band:'Second Reduced',ex:'Supply and installation',notes:''},
+  {cat:'Sporting facilities',rate:9,band:'Second Reduced',ex:'Gym membership, golf green fees, sports centres',notes:''},
+  {cat:'Qualifying apartments',rate:9,band:'Second Reduced',ex:'Supply and construction of qualifying apartments',notes:'26 Nov 2025 – 31 Dec 2030'},
+  {cat:'Periodicals',rate:9,band:'Second Reduced',ex:'Certain periodicals and e-periodicals',notes:'Excludes predominantly advertising/AV content'},
+  {cat:'Restaurant & catering food',rate:9,band:'Second Reduced',ex:'Restaurant meals, catering supplies',notes:'From 1 Jul 2026 · permanent'},
+  {cat:'Hot take-away food',rate:9,band:'Second Reduced',ex:'Hot take-away, hot tea and coffee',notes:'From 1 Jul 2026 · permanent'},
+  {cat:'Hairdressing',rate:9,band:'Second Reduced',ex:'Hairdressing services including in salons',notes:'From 1 Jul 2026 · permanent'},
+  {cat:'Most food',rate:0,band:'Zero',ex:'Bread, milk, meat, fish, vegetables, fruit, eggs, cheese',notes:'Excludes alcohol, soft drinks, confectionery'},
+  {cat:'Oral medicines',rate:0,band:'Zero',ex:'Human and veterinary oral medicines',notes:'Non-oral medicines at 23%'},
+  {cat:'Books & e-books',rate:0,band:'Zero',ex:'Printed books, e-books, audiobooks',notes:'E-books zero-rated since 1 Jan 2024'},
+  {cat:'Newspapers & e-newspapers',rate:0,band:'Zero',ex:'Print and electronic newspapers',notes:'E-newspapers since 1 Jan 2023'},
+  {cat:"Children's clothing",rate:0,band:'Zero',ex:'Clothing and footwear for children under 11',notes:''},
+  {cat:'Agricultural inputs',rate:0,band:'Zero',ex:'Animal feed, fertiliser, seeds, plants',notes:''},
+  {cat:'Solar panels',rate:0,band:'Zero',ex:'Supply and installation on private dwellings & schools',notes:''},
+  {cat:'Exports',rate:0,band:'Zero',ex:'Goods exported outside the EU',notes:'Input VAT generally reclaimable'},
+  {cat:'Intra-EU supplies',rate:0,band:'Zero',ex:'Supplies to VAT-registered businesses in other member states',notes:'Requires valid VAT number'},
+  {cat:'Sanitary products',rate:0,band:'Zero',ex:'Sanitary towels, tampons',notes:''},
+  {cat:'Live cattle',rate:4.8,band:'Livestock',ex:'Live bovine animals',notes:'May be 0% if exported outside EU'},
+  {cat:'Live sheep',rate:4.8,band:'Livestock',ex:'Live ovine animals',notes:''},
+  {cat:'Live pigs',rate:4.8,band:'Livestock',ex:'Live porcine animals',notes:''},
+  {cat:'Flat-rate farmer addition',rate:4.5,band:'Flat-Rate Farmer',ex:'Added by unregistered farmers on supplies to VAT-registered businesses',notes:'Reduced from 5.1% on 1 Jan 2026'}
+];
+
+const CALC_CATEGORIES = [
+  {g:'Standard · 23%',items:['Cars & vehicles','Electronics','Furniture & household goods','Alcohol','Soft drinks & bottled water','Cosmetics & toiletries','Petrol & diesel','Professional services','Non-oral medicines','Telecommunications'],rate:23},
+  {g:'Reduced · 13.5%',items:['Hotel accommodation','Cinema & theatre tickets','Museums & galleries','Cleaning services','Veterinary services','Coal & heating oil','Short-term car hire','Building & repair services','Printed matter','Amusement parks'],rate:13.5},
+  {g:'Second Reduced · 9%',items:['Electricity','Natural gas','EV charging','Heat pumps','Sporting facilities','Qualifying apartments','Periodicals','Restaurant & catering food (from Jul 2026)','Hot take-away food (from Jul 2026)','Hairdressing (from Jul 2026)'],rate:9},
+  {g:'Zero · 0%',items:['Most food','Oral medicines','Books & e-books','Newspapers & e-newspapers',"Children's clothing",'Agricultural inputs','Solar panels','Exports','Intra-EU supplies'],rate:0},
+  {g:'Livestock · 4.8%',items:['Live cattle','Live sheep','Live pigs'],rate:4.8}
+];
+
+const SOURCES = [
+  {name:'Revenue · Current VAT Rates',authority:'Revenue Commissioners',color:'#00d47e',icon:'🏛️',
+   desc:'Single most authoritative page. Shows current rates effective from each date, including 1 Jan 2026 changes.',
+   url:'https://www.revenue.ie/en/vat/vat-rates/search-vat-rates/current-VAT-rates.aspx',status:'Authoritative'},
+  {name:'Revenue · Second Reduced Rate (9%)',authority:'Revenue Commissioners',color:'#a855f7',icon:'📋',
+   desc:'Details the 9% scope, including catering and hairdressing from 1 July 2026 and energy extended to 2030.',
+   url:'https://www.revenue.ie/en/vat/vat-rates/search-vat-rates/second-reduced-rate.aspx',status:'Authoritative'},
+  {name:'Revenue · Reduced Rate (13.5%)',authority:'Revenue Commissioners',color:'#3b82f6',icon:'📋',
+   desc:'Details the 13.5% scope, including note that catering & hairdressing applied from Sep 2023 to Jun 2026.',
+   url:'https://www.revenue.ie/en/vat/vat-rates/search-vat-rates/reduced-rate.aspx',status:'Authoritative'},
+  {name:'Revenue · Historical VAT Rates',authority:'Revenue Commissioners',color:'#06b6d4',icon:'📜',
+   desc:'Full rate history back to 2020, useful for validating that no earlier changes were missed.',
+   url:'https://www.revenue.ie/en/vat/vat-rates/search-vat-rates/historical-vat-rates.aspx',status:'Authoritative'},
+  {name:'Gov.ie · Budget 2026 VAT Measure',authority:'Department of Finance',color:'#f59e0b',icon:'📰',
+   desc:'Official press release confirming the 9% rate for food/catering and hairdressing from 1 July 2026 with no sunset clause.',
+   url:'https://www.gov.ie/en/department-of-finance/press-releases/government-marks-reduction-of-vat-rate-to-9-for-food-businesses-and-hairdressers/',status:'Official'},
+  {name:'VAT Consolidation Act 2010',authority:'Irish Statute Book',color:'#ec4899',icon:'⚖️',
+   desc:'Ultimate legal reference. Consolidated text revised to 1 January 2026. Use for disputed interpretations.',
+   url:'https://revisedacts.lawreform.ie/eli/2010/act/31/revised/en/html',status:'Legislation'},
+  {name:'TaxID.dev VAT Rates API',authority:'Third-Party API',color:'#8b98a5',icon:'🔌',
+   desc:'Machine-readable VAT rate endpoint, cached 24h. Used by the automated rate check on this dashboard.',
+   url:'https://www.taxid.dev/vat-rates/ie',status:'API'},
+  {name:'CAI Tax News RSS',authority:'Chartered Accountants Ireland',color:'#00a862',icon:'📡',
+   desc:'Daily tax headlines including VAT changes. Used for early-warning alerts on this dashboard.',
+   url:'https://www.charteredaccountants.ie/knowledge-centre/Tax/News',status:'RSS'}
+];
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+const eur = n => '€' + n.toLocaleString('en-IE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const $ = id => document.getElementById(id);
+
+function openSource(url){
+  window.open(url,'_blank','noopener,noreferrer');
+}
+
+/* Chart.js defaults */
+Chart.defaults.color = '#8b98a5';
+Chart.defaults.font.family = "'Inter',-apple-system,sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.boxWidth = 7;
+Chart.defaults.plugins.legend.labels.padding = 14;
+Chart.defaults.plugins.tooltip.backgroundColor = '#141c25';
+Chart.defaults.plugins.tooltip.borderColor = '#1e2a36';
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+Chart.defaults.plugins.tooltip.titleColor = '#e6edf3';
+Chart.defaults.plugins.tooltip.bodyColor = '#8b98a5';
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.plugins.tooltip.cornerRadius = 8;
+Chart.defaults.plugins.tooltip.displayColors = false;
+const gridStyle = {color:'#18222c', drawTicks:false};
+const noGrid = {display:false};
+
+/* =========================================================
+   LIVE SOURCE INTEGRATION
+   ========================================================= */
+
+// Track mismatch count
+let mismatchCount = 0;
+
+// Update freshness badge
+function updateFreshnessBadge(date){
+  const badge = $('freshnessBadge');
+  badge.innerHTML = `<span class="dot"></span>Source: Revenue · checked ${date}`;
+  $('footLastCheck').textContent = 'Last check: ' + date;
+}
+
+// Update API badge
+function updateApiBadge(status, text){
+  const b = $('apiBadge');
+  b.className = 'pill ' + (status === 'ok' ? 'info' : status === 'warn' ? 'warn' : 'err');
+  b.innerHTML = `<span class="dot"></span>API: ${text}`;
+}
+
+// Show mismatch alert
+function showRateAlert(apiStandard, apiReduced, expected){
+  mismatchCount++;
+  $('srcMismatch').textContent = mismatchCount;
+  $('srcMismatchFoot').textContent = 'Discrepancy detected — review required';
+  $('srcMismatchFoot').style.color = 'var(--red)';
+
+  const banner = $('alertBanner');
+  banner.classList.add('show');
+  $('alertText').innerHTML = `<b>Rate mismatch detected.</b> TaxID.dev API reports standard <b>${apiStandard}%</b> and reduced <b>${apiReduced.join('% / ')}%</b>, but this dashboard expects standard <b>${expected.standard}%</b> and second reduced <b>${expected.second}%</b>. Review the <a href="#" onclick="openSource('https://www.revenue.ie/en/vat/vat-rates/search-vat-rates/current-VAT-rates.aspx');return false;" style="color:#fca5a5;text-decoration:underline">Revenue source</a> before updating production figures.`;
+}
+
+// Hide mismatch alert
+function hideRateAlert(){
+  $('alertBanner').classList.remove('show');
+}
+
+// Main API check function
+async function checkVatRates(manual){
+  const btn = $('verifyBtn');
+  if(manual){ btn.disabled = true; btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg> Checking…'; }
+
+  updateApiBadge('info','checking…');
+  $('srcApiStatus').textContent = 'Checking…';
+  $('srcApiStatus').style.color = 'var(--muted)';
+  $('stApi').innerHTML = '<span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--amber);display:inline-block"></span> Checking';
+
+  const expected = {
+    standard: RATES.find(r=>r.key==='standard').rate,
+    reduced: RATES.find(r=>r.key==='reduced').rate,
+    second: RATES.find(r=>r.key==='second').rate
+  };
+
+  try{
+    const controller = new AbortController();
+    const timeout = setTimeout(()=>controller.abort(), 8000);
+
+    const res = await fetch('https://www.taxid.dev/api/v1/rates/IE', {
+      signal: controller.signal,
+      headers: { 'Accept':'application/json' }
+    });
+    clearTimeout(timeout);
+
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    const apiStandard = data.standard_rate;
+    const apiReduced = Array.isArray(data.reduced_rates) ? data.reduced_rates : [];
+
+    const now = new Date().toLocaleString('en-IE', {dateStyle:'short', timeStyle:'short'});
+    $('srcLastApi').textContent = now;
+    $('stApi').innerHTML = '<span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span> Healthy';
+    $('srcApiStatus').textContent = 'Healthy';
+    $('srcApiStatus').style.color = 'var(--green)';
+    updateApiBadge('ok','healthy');
+    updateFreshnessBadge(new Date().toLocaleDateString('en-IE'));
+
+    const standardOk = apiStandard === expected.standard;
+    const secondOk = apiReduced.includes(expected.second);
+
+    if(!standardOk || !secondOk){
+      showRateAlert(apiStandard, apiReduced, expected);
+    } else {
+      hideRateAlert();
+      $('srcMismatch').textContent = '0';
+      $('srcMismatchFoot').textContent = 'No discrepancies detected';
+      $('srcMismatchFoot').style.color = 'var(--muted)';
+      console.log('✅ VAT rates match Revenue source.');
+    }
+  }catch(err){
+    console.warn('API rate check failed:', err.message);
+    const now = new Date().toLocaleString('en-IE', {dateStyle:'short', timeStyle:'short'});
+    $('srcLastApi').textContent = now + ' (failed)';
+    $('stApi').innerHTML = '<span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--amber);display:inline-block"></span> Unreachable';
+    $('srcApiStatus').textContent = 'Unavailable';
+    $('srcApiStatus').style.color = 'var(--amber)';
+    updateApiBadge('warn','unreachable');
+    // Still update freshness from local data
+    updateFreshnessBadge(new Date().toLocaleDateString('en-IE'));
+  }finally{
+    if(manual){
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg> Verify Now';
+    }
+    scheduleNextCheck();
+  }
+}
+
+// Schedule next check and display
+function scheduleNextCheck(){
+  const next = new Date(Date.now() + 6*60*60*1000);
+  $('stNext').textContent = next.toLocaleString('en-IE', {dateStyle:'short', timeStyle:'short'});
+}
+
+// RSS feed loader
+async function loadRssFeed(){
+  const list = $('rssList');
+  const feedUrl = 'https://www.charteredaccountants.ie/knowledge-centre/Tax/News';
+  const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(feedUrl);
+
+  try{
+    const controller = new AbortController();
+    const timeout = setTimeout(()=>controller.abort(), 10000);
+    const res = await fetch(proxy, {signal:controller.signal});
+    clearTimeout(timeout);
+
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const xml = new DOMParser().parseFromString(text, 'text/xml');
+    const items = [...xml.querySelectorAll('item')].slice(0, 6);
+
+    if(!items.length){
+      list.innerHTML = '<div class="rss-empty">No headlines available. Open the RSS source directly.</div>';
+      $('stRss').innerHTML = '<span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--amber);display:inline-block"></span> Empty';
+      return;
+    }
+
+    list.innerHTML = items.map(item=>{
+      const title = item.querySelector('title')?.textContent?.trim() || 'Untitled';
+      const link = item.querySelector('link')?.textContent?.trim() || '#';
+      const date = item.querySelector('pubDate')?.textContent?.trim() || '';
+      const dateStr = date ? new Date(date).toLocaleDateString('en-IE', {day:'numeric', month:'short', year:'numeric'}) : '';
+      return `<a class="rss-item" href="${link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">
+        <div class="rss-title">${title}</div>
+        <div class="rss-meta">${dateStr}</div>
+      </a>`;
+    }).join('');
+
+    $('stRss').innerHTML = '<span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span> ' + items.length + ' items';
+  }catch(err){
+    console.warn('RSS feed failed:', err.message);
+    list.innerHTML = '<div class="rss-empty">Feed unavailable via proxy. Click below to open the source directly.</div>';
+    $('stRss').innerHTML = '<span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--amber);display:inline-block"></span> Unreachable';
+  }
+}
+
+// Render source cards
+function renderSources(){
+  $('sourceGrid').innerHTML = SOURCES.map(s=>`
+    <div class="source-card" style="--sc:${s.color}">
+      <div class="sc-head">
+        <div class="sc-icon">${s.icon}</div>
+        <div>
+          <div class="sc-name">${s.name}</div>
+          <div class="sc-authority">${s.authority}</div>
+        </div>
+      </div>
+      <div class="sc-desc">${s.desc}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <a class="sc-link" href="${s.url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">
+          Open source
+          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        <span style="font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:600">${s.status}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* =========================================================
+   VIEW NAVIGATION
+   ========================================================= */
+const VIEW_META = {
+  overview:{t:'VAT Overview', s:'Irish Value-Added Tax performance & structure · 2026'},
+  rates:{t:'Rate Structure', s:'All VAT rate bands, scopes and historical evolution'},
+  calculator:{t:'VAT Calculator', s:'Compute VAT for any Irish category at 2026 rates'},
+  sectors:{t:'Sector Analysis', s:'Where VAT receipts come from across the economy'},
+  eu:{t:'EU Benchmark', s:'How Ireland compares with other member states'},
+  timeline:{t:'Policy Timeline', s:'Key VAT changes and their fiscal impact'},
+  table:{t:'Full Rate Table', s:'Complete searchable reference of Irish VAT categories'},
+  sources:{t:'Sources & Compliance', s:'Authoritative sources, live status and verification checklist'}
+};
+const initialized = {};
+
+document.querySelectorAll('.nav-item[data-view]').forEach(item=>{
+  item.addEventListener('click',()=>{
+    const v = item.dataset.view;
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    item.classList.add('active');
+    document.querySelectorAll('.view').forEach(s=>s.classList.remove('active'));
+    $('view-'+v).classList.add('active');
+    $('pageTitle').textContent = VIEW_META[v].t;
+    $('pageSub').textContent = VIEW_META[v].s;
+    document.querySelector('.content').scrollTop = 0;
+    if(!initialized[v]){ initView(v); initialized[v] = true; }
+  });
+});
+
+/* =========================================================
+   CHART BUILDERS
+   ========================================================= */
+function buildReceipts(){
+  new Chart($('chartReceipts'),{
+    type:'line',
+    data:{labels:RECEIPTS.labels,datasets:[{label:'Net VAT receipts (€bn)',data:RECEIPTS.values,borderColor:'#00d47e',borderWidth:2.5,tension:.35,pointRadius:4,pointHoverRadius:7,pointBackgroundColor:'#0f151c',pointBorderColor:'#00d47e',pointBorderWidth:2.5,fill:true,backgroundColor:(c)=>{const {ctx,chartArea}=c.chart;if(!chartArea)return 'rgba(0,212,126,.1)';const g=ctx.createLinearGradient(0,chartArea.top,0,chartArea.bottom);g.addColorStop(0,'rgba(0,212,126,.28)');g.addColorStop(1,'rgba(0,212,126,0)');return g;}}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const i=c.dataIndex;const g=RECEIPTS.growth[i];return [`€${c.parsed.y.toFixed(1)}bn`, g!==null?`Growth: ${g>0?'+':''}${g}% YoY`:'Baseline year'];}}}},scales:{x:{grid:noGrid,border:{color:'#1e2a36'}},y:{grid:gridStyle,border:{display:false},ticks:{callback:v=>'€'+v+'bn'},beginAtZero:false}}}
+  });
+}
+function buildRateDist(){
+  new Chart($('chartRateDist'),{type:'doughnut',data:{labels:['Standard 23%','Reduced 13.5%','Zero 0%','Second Reduced 9%','Livestock 4.8%'],datasets:[{data:[47.6,40.0,9.9,2.0,0.5],backgroundColor:['#00d47e','#3b82f6','#06b6d4','#a855f7','#f59e0b'],borderColor:'#0f151c',borderWidth:3,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{padding:12,font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed}% of activity`}}}}});
+}
+function buildYtd(){
+  new Chart($('chartYtd'),{type:'bar',data:{labels:YTD.labels,datasets:[{label:'Cumulative VAT receipts (€bn)',data:YTD.values,backgroundColor:'rgba(59,130,246,.75)',hoverBackgroundColor:'#3b82f6',borderRadius:7,borderSkipped:false,barThickness:44}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`€${c.parsed.y.toFixed(1)}bn · +${YTD.yoy[c.dataIndex]}% YoY`}}},scales:{x:{grid:noGrid,border:{color:'#1e2a36'}},y:{grid:gridStyle,border:{display:false},ticks:{callback:v=>'€'+v+'bn'},beginAtZero:true}}}});
+}
+function buildComposition(){
+  new Chart($('chartComposition'),{type:'doughnut',data:{labels:COMPOSITION.labels,datasets:[{data:COMPOSITION.values,backgroundColor:COMPOSITION.colors,borderColor:'#0f151c',borderWidth:3,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{padding:12,font:{size:11}}},tooltip:{callbacks:{label:c=>{const t=COMPOSITION.values.reduce((a,b)=>a+b,0);return `${c.label}: €${c.parsed}bn (${(c.parsed/t*100).toFixed(1)}%)`;}}}}}});
+}
+function buildHist(){
+  new Chart($('chartHist'),{type:'line',data:{labels:STANDARD_HISTORY.labels,datasets:[{label:'Standard VAT rate (%)',data:STANDARD_HISTORY.values,borderColor:'#00d47e',borderWidth:2.5,tension:.3,pointRadius:3.5,pointHoverRadius:6,pointBackgroundColor:'#0f151c',pointBorderColor:'#00d47e',pointBorderWidth:2,fill:true,backgroundColor:(c)=>{const {ctx,chartArea}=c.chart;if(!chartArea)return 'rgba(0,212,126,.1)';const g=ctx.createLinearGradient(0,chartArea.top,0,chartArea.bottom);g.addColorStop(0,'rgba(0,212,126,.22)');g.addColorStop(1,'rgba(0,212,126,0)');return g;}}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y}%`,afterLabel:c=>c.label==='1983'?'Peak general rate 35% (Mar 1983)':c.label==='2021*'?'Temporary COVID-19 reduction (Sep 2020 – Feb 2021)':''}}},scales:{x:{grid:noGrid,border:{color:'#1e2a36'}},y:{grid:gridStyle,border:{display:false},ticks:{callback:v=>v+'%'},beginAtZero:true,suggestedMax:40}}}});
+}
+function buildSectors(){
+  new Chart($('chartSectors'),{type:'bar',data:{labels:SECTORS.labels,datasets:[{label:'Internal VAT receipts (€bn)',data:SECTORS.values,backgroundColor:SECTORS.colors,hoverBackgroundColor:SECTORS.colors,borderRadius:7,borderSkipped:false,barThickness:26}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`€${c.parsed.x.toFixed(1)}bn · ${SECTORS.share[c.dataIndex]}% share`}}},scales:{x:{grid:gridStyle,border:{display:false},ticks:{callback:v=>'€'+v+'bn'}},y:{grid:noGrid,border:{color:'#1e2a36'},ticks:{font:{size:11.5}}}}}});
+}
+function buildSectorShare(){
+  new Chart($('chartSectorShare'),{type:'polarArea',data:{labels:['Wholesale & Retail','Professional Services','Info & Communication','Manufacturing','All Other'],datasets:[{data:SECTORS.share,backgroundColor:['rgba(0,212,126,.65)','rgba(59,130,246,.65)','rgba(168,85,247,.65)','rgba(245,158,11,.65)','rgba(93,107,122,.5)'],borderColor:'#0f151c',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:10,font:{size:10.5}}},tooltip:{callbacks:{label:c=>`${c.parsed.r}% of internal VAT`}}},scales:{r:{grid:{color:'#18222c'},angleLines:{color:'#18222c'},ticks:{display:false},beginAtZero:true}}}});
+}
+function buildEu(){
+  const labels = EU.map(e=>e.c);
+  const values = EU.map(e=>e.v);
+  const colors = EU.map(e=> e.c==='Ireland' ? '#00d47e' : 'rgba(59,130,246,.55)');
+  const hovers = EU.map(e=> e.c==='Ireland' ? '#00e88b' : '#3b82f6');
+  new Chart($('chartEu'),{type:'bar',data:{labels,datasets:[{label:'Standard VAT rate (%)',data:values,backgroundColor:colors,hoverBackgroundColor:hovers,borderRadius:6,borderSkipped:false,barThickness:20}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const d=(c.parsed.x-EU_AVG).toFixed(1);return `${c.parsed.x}% · ${d>0?'+':''}${d}pp vs EU avg`;}}}},scales:{x:{grid:gridStyle,border:{display:false},ticks:{callback:v=>v+'%'},min:14,max:29},y:{grid:noGrid,border:{color:'#1e2a36'},ticks:{font:{size:11.5}}}}},plugins:[{id:'avgLine',afterDraw(chart){const {ctx,chartArea,scales:{x}}=chart;const px=x.getPixelForValue(EU_AVG);ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle='#f59e0b';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(px,chartArea.top);ctx.lineTo(px,chartArea.bottom);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#f59e0b';ctx.font='600 10px Inter, sans-serif';ctx.textAlign='center';ctx.fillText('EU avg '+EU_AVG+'%',px,chartArea.top-6);ctx.restore();}}]});
+}
+
+/* =========================================================
+   RENDERERS
+   ========================================================= */
+function renderRateStrip(){
+  const strip = $('rateStrip');
+  strip.innerHTML = RATES.map((r,i)=>`<div class="rate-card ${i===0?'sel':''}" data-key="${r.key}" style="--rc:${r.color}"><div class="rc-top"><span class="rc-name">${r.name}</span><span class="rc-dot"></span></div><div class="rc-val">${r.rate}%</div><div class="rc-sub">${r.sub}</div></div>`).join('');
+  strip.querySelectorAll('.rate-card').forEach(card=>{
+    card.addEventListener('click',()=>{
+      strip.querySelectorAll('.rate-card').forEach(c=>c.classList.remove('sel'));
+      card.classList.add('sel');
+      renderRateDetail(card.dataset.key);
+    });
+  });
+  renderRateDetail('standard');
+}
+function renderRateDetail(key){
+  const r = RATES.find(x=>x.key===key);
+  $('rateDetailTitle').textContent = `${r.name} Rate · ${r.rate}%`;
+  $('rateDetail').innerHTML = `<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px"><span style="font-size:42px;font-weight:750;letter-spacing:-2px;color:${r.color}">${r.rate}%</span><span style="font-size:12px;color:var(--muted)">${r.sub}</span></div><div class="mini-stats" style="margin-bottom:14px"><div class="mini"><div class="mini-l">Share of activity</div><div class="mini-v" style="font-size:15px">${r.share}</div></div><div class="mini"><div class="mini-l">Share of receipts</div><div class="mini-v" style="font-size:15px">${r.receipts}</div></div></div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);font-weight:700;margin-bottom:9px">Applies to</div><div style="display:flex;flex-direction:column;gap:7px">${r.detail.map(d=>`<div style="display:flex;gap:9px;font-size:12.5px;color:var(--muted);line-height:1.5"><span style="color:${r.color};flex-shrink:0">•</span><span>${d}</span></div>`).join('')}</div>`;
+}
+function renderHistTable(){
+  $('histTable').innerHTML = HIST_RATES.map(h=>`<tr><td class="td-strong">${h.d}</td><td><span class="badge" style="--bc:#00d47e">${h.s}%</span></td><td><span class="badge" style="--bc:#3b82f6">${h.r}%</span></td><td>${h.s2==='—'?'<span style="color:var(--dim)">—</span>':`<span class="badge" style="--bc:#a855f7">${h.s2}%</span>`}</td><td><span class="badge" style="--bc:#f59e0b">${h.l}%</span></td><td><span class="badge" style="--bc:#8b98a5">${h.f}%</span></td></tr>`).join('');
+}
+function renderFullTable(){
+  const tbody = $('fullTable');
+  const search = $('tblSearch').value.toLowerCase().trim();
+  const filter = $('tblFilter').value;
+  const bandColor = {'Standard':'#00d47e','Reduced':'#3b82f6','Second Reduced':'#a855f7','Zero':'#06b6d4','Livestock':'#f59e0b','Flat-Rate Farmer':'#8b98a5'};
+  const rows = FULL_TABLE.filter(r=>{
+    const ms = !search || r.cat.toLowerCase().includes(search) || r.ex.toLowerCase().includes(search) || r.band.toLowerCase().includes(search);
+    const mf = !filter || String(r.rate) === filter;
+    return ms && mf;
+  });
+  if(!rows.length){ tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:34px;color:var(--dim)">No categories match your filters.</td></tr>`; return; }
+  tbody.innerHTML = rows.map(r=>`<tr><td class="td-strong">${r.cat}</td><td><span class="badge" style="--bc:${bandColor[r.band]}">${r.rate}%</span></td><td>${r.band}</td><td>${r.ex}</td><td style="color:var(--dim);font-size:11.5px">${r.notes||'—'}</td></tr>`).join('');
+}
+function renderTimeline(){
+  $('timeline').innerHTML = TIMELINE.map(t=>`<div class="tl-item" style="--tc:${t.c}"><div class="tl-date">${t.d}</div><div class="tl-title">${t.t}</div><div class="tl-desc">${t.x}</div></div>`).join('');
+}
+
+/* =========================================================
+   CALCULATOR
+   ========================================================= */
+let calcMode = 'add';
+function buildCalcCategories(){
+  const sel = $('calcCategory');
+  sel.innerHTML = CALC_CATEGORIES.map(g=>`<optgroup label="${g.g}">${g.items.map(i=>`<option value="${i}" data-rate="${g.rate}">${i}</option>`).join('')}</optgroup>`).join('');
+  sel.value = 'Electronics';
+}
+function getCalcRate(){
+  const sel = $('calcCategory');
+  const opt = sel.options[sel.selectedIndex];
+  let rate = parseFloat(opt.dataset.rate);
+  const farmer = $('calcFarmer').value;
+  if(rate === 4.8 && farmer === 'flat') rate = 4.5;
+  return rate;
+}
+function rateBandName(rate){
+  if(rate === 23) return 'Standard';
+  if(rate === 13.5) return 'Reduced';
+  if(rate === 9) return 'Second Reduced';
+  if(rate === 0) return 'Zero';
+  if(rate === 4.8) return 'Livestock';
+  if(rate === 4.5) return 'Flat-Rate Farmer';
+  return '—';
+}
+function calc(){
+  const amount = parseFloat($('calcAmount').value) || 0;
+  const rate = getCalcRate();
+  const r = rate / 100;
+  let net, vat, gross;
+  if(calcMode === 'add'){ net = amount; vat = net * r; gross = net + vat; }
+  else { gross = amount; net = gross / (1 + r); vat = gross - net; }
+  $('bdNet').textContent = eur(net);
+  $('bdRate').textContent = rate + '%';
+  $('bdVat').textContent = eur(vat);
+  $('bdGross').textContent = eur(gross);
+  $('resLabel').textContent = calcMode === 'add' ? 'Gross Amount (incl. VAT)' : 'Net Amount (excl. VAT)';
+  $('resValue').textContent = calcMode === 'add' ? eur(gross) : eur(net);
+  const band = rateBandName(rate);
+  $('resNote').textContent = `${band} rate of ${rate}% applied to ${eur(amount)}`;
+  $('miniRate').textContent = rate + '%';
+  $('miniBand').textContent = band;
+  const cat = $('calcCategory').value;
+  $('farmerField').style.display = cat.startsWith('Live ') ? 'block' : 'none';
+}
+
+/* =========================================================
+   CSV EXPORT
+   ========================================================= */
+function exportCSV(){
+  const header = ['Category','Rate (%)','Band','Examples','Notes'];
+  const rows = FULL_TABLE.map(r=>[r.cat, r.rate, r.band, r.ex, r.notes||'']);
+  const csv = [header, ...rows].map(row=>row.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ireland-vat-rates-2026.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* =========================================================
+   INIT VIEW
+   ========================================================= */
+function initView(v){
+  if(v === 'overview'){ buildReceipts(); buildRateDist(); buildYtd(); buildComposition(); }
+  if(v === 'rates'){ buildHist(); }
+  if(v === 'sectors'){ buildSectors(); buildSectorShare(); }
+  if(v === 'eu'){ buildEu(); }
+  if(v === 'sources'){ renderSources(); loadRssFeed(); }
+}
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+window.addEventListener('DOMContentLoaded',()=>{
+  // Boot overview (default view)
+  buildReceipts(); buildRateDist(); buildYtd(); buildComposition();
+  initialized.overview = true;
+
+  // Render static content
+  renderRateStrip();
+  renderHistTable();
+  renderTimeline();
+  renderFullTable();
+  buildCalcCategories();
+  calc();
+
+  // Render sources panel immediately (so it's ready when user navigates)
+  renderSources();
+
+  // Set manual review date to today
+  $('srcLastManual').textContent = new Date().toLocaleDateString('en-IE');
+
+  // Table filters
+  $('tblSearch').addEventListener('input', renderFullTable);
+  $('tblFilter').addEventListener('change', renderFullTable);
+
+  // Calculator
+  document.querySelectorAll('#calcMode button').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('#calcMode button').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      calcMode = btn.dataset.mode;
+      calc();
+    });
+  });
+  $('calcCategory').addEventListener('change', calc);
+  $('calcAmount').addEventListener('input', calc);
+  $('calcFarmer').addEventListener('change', calc);
+
+  // Verify Now button
+  $('verifyBtn').addEventListener('click', ()=> checkVatRates(true));
+
+  // Initial API check
+  checkVatRates(false);
+
+  // Auto-check every 6 hours
+  setInterval(()=> checkVatRates(false), 6*60*60*1000);
+
+  // Preload RSS in background so it's ready when user opens Sources view
+  loadRssFeed();
+});
+</script>
+</body>
+</html>
